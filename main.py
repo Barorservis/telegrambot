@@ -10,7 +10,7 @@ import os
 
 matplotlib.use('Agg')
 
-TOKEN = "8107581760:AAFWUHgJzxc3cH7F9sdOXa34W-JGgmR39Ms"
+TOKEN = os.getenv("BOT_TOKEN")
 BASE_URL = "https://api.binance.com/api/v3"
 TOP_COINS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "AVAXUSDT", "ADAUSDT", "BNBUSDT", "LTCUSDT", "XRPUSDT", "NOTUSDT", "DOGEUSDT"]
 
