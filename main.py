@@ -1,3 +1,7 @@
+from pathlib import Path
+
+# Полностью исправленный main.py с корректными отступами
+fixed_main_py = """
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 import requests
@@ -16,18 +20,15 @@ BASE_URL = "https://api.binance.com/api/v3"
 
 FAKE_USERS_FILE = "fake_users.txt"
 
-
 def load_fake_users():
     if os.path.exists(FAKE_USERS_FILE):
         with open(FAKE_USERS_FILE, "r") as f:
             return int(f.read())
     return 9000
 
-
 def save_fake_users(count):
     with open(FAKE_USERS_FILE, "w") as f:
         f.write(str(count))
-
 
 def get_cmc_data(symbol):
     url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
@@ -48,7 +49,6 @@ def get_cmc_data(symbol):
         print(f"CMC Error: {e}")
     return None
 
-
 def get_klines(symbol, interval='1h', limit=50):
     url = f"{BASE_URL}/klines?symbol={symbol}&interval={interval}&limit={limit}"
     response = requests.get(url)
@@ -61,7 +61,6 @@ def get_klines(symbol, interval='1h', limit=50):
         print(f"Binance API error: {e}")
         return None
 
-
 def calculate_rsi(closes, period=14):
     if len(closes) < period + 1:
         return 0
@@ -73,11 +72,9 @@ def calculate_rsi(closes, period=14):
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs))
 
-
 def show_main_menu(update: Update, context: CallbackContext):
     user = update.effective_user
     first_name = user.first_name or "друг"
-
     fake_count = load_fake_users() + 1
     save_fake_users(fake_count)
 
@@ -94,7 +91,6 @@ def show_main_menu(update: Update, context: CallbackContext):
 
     context.bot.send_message(chat_id=update.effective_chat.id, text=welcome_text, parse_mode="Markdown")
     context.bot.send_message(chat_id=update.effective_chat.id, text="📍 Выбери раздел:", reply_markup=keyboard)
-
 
 def handle_text(update: Update, context: CallbackContext):
     text = update.message.text.upper()
@@ -137,28 +133,32 @@ def handle_text(update: Update, context: CallbackContext):
                 elif price < ma50:
                     ma_comment = "(нисходящий тренд)"
 
-              response = (
-    f"📊 *Анализ {text} (CoinMarketCap)*\\n"
-)
-if cmc_data:
-    response += (
-        f"\n❖ Цена: *${cmc_data['price']:.6f}*"
-        f"\n❖ Рыночная капитализация: *${cmc_data['market_cap'] / 1e9:.2f}B*"
-        f"\n❖ Объём за 24ч: *${cmc_data['volume_24h'] / 1e6:.2f}M*"
-        f"\n❖ Изменение за 24ч: *{cmc_data['percent_change_24h']:.2f}%*"
-    )
-else:
-    response += "\n❖ Не удалось загрузить данные с CoinMarketCap."
+                response = (
+                    f"📊 *Анализ {text} (CoinMarketCap)*\\n"
+                )
 
-response += (
-    f"\n\n📈 *Технический анализ (Binance)*\n"
-    f"\n❖ RSI (14): *{rsi:.2f}* {rsi_comment}"
-    f"\n❖ MA(50): *{ma50:.6f}* {ma_comment}"
-    f"\n❖ Объём за 24ч: *{volume_str}*"
-    f"\n❖ Зона сопротивления: ~*{resistance:.6f}*"
-    f"\n\n_Это лишь базовый обзор. Для полноты картины учитывайте свои цели и стратегию._"
-)      
-                except Exception as e:
+                if cmc_data:
+                    response += (
+                        f"\\n❖ Цена: *${cmc_data['price']:.6f}*"
+                        f"\\n❖ Рыночная капитализация: *${cmc_data['market_cap'] / 1e9:.2f}B*"
+                        f"\\n❖ Объём за 24ч: *${cmc_data['volume_24h'] / 1e6:.2f}M*"
+                        f"\\n❖ Изменение за 24ч: *{cmc_data['percent_change_24h']:.2f}%*"
+                    )
+                else:
+                    response += "\\n❖ Не удалось загрузить данные с CoinMarketCap."
+
+                response += (
+                    f"\\n\\n📈 *Технический анализ (Binance)*\\n"
+                    f"\\n❖ RSI (14): *{rsi:.2f}* {rsi_comment}"
+                    f"\\n❖ MA(50): *{ma50:.6f}* {ma_comment}"
+                    f"\\n❖ Объём за 24ч: *{volume_str}*"
+                    f"\\n❖ Зона сопротивления: ~*{resistance:.6f}*"
+                    f"\\n\\n_Это лишь базовый обзор. Для полноты картины учитывайте свои цели и стратегию._"
+                )
+
+                update.message.reply_text(response, parse_mode="Markdown")
+
+            except Exception as e:
                 print(f"Анализ ошибка: {e}")
                 update.message.reply_text("Ошибка анализа. Возможно, монета не торгуется на Binance.")
 
@@ -187,7 +187,6 @@ response += (
     else:
         update.message.reply_text("Выбери действие с помощью кнопок ⬇️")
 
-
 def main():
     updater = Updater(TOKEN, use_context=True)
     dp = updater.dispatcher
@@ -198,7 +197,12 @@ def main():
     updater.start_polling()
     updater.idle()
 
-
 # Запуск убран, чтобы избежать дублирующего polling от Render
 # if __name__ == '__main__':
 #     main()
+"""
+
+# Сохраняем файл
+file_path = "/mnt/data/main.py"
+Path(file_path).write_text(fixed_main_py.strip(), encoding="utf-8")
+file_path
