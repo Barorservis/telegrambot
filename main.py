@@ -137,42 +137,28 @@ def handle_text(update: Update, context: CallbackContext):
                 elif price < ma50:
                     ma_comment = "(нисходящий тренд)"
 
-                response = f"📊 *Анализ {text} (CoinMarketCap)*
-"
-                if cmc_data:
-                    response += (
-                        f"
-❖ Цена: *${cmc_data['price']:.6f}*"
-                        f"
-❖ Рыночная капитализация: *${cmc_data['market_cap'] / 1e9:.2f}B*"
-                        f"
-❖ Объём за 24ч: *${cmc_data['volume_24h'] / 1e6:.2f}M*"
-                        f"
-❖ Изменение за 24ч: *{cmc_data['percent_change_24h']:.2f}%*"
-                    )
-                else:
-                    response += "
-❖ Не удалось загрузить данные с CoinMarketCap."
+              response = (
+    f"📊 *Анализ {text} (CoinMarketCap)*\\n"
+)
+if cmc_data:
+    response += (
+        f"\n❖ Цена: *${cmc_data['price']:.6f}*"
+        f"\n❖ Рыночная капитализация: *${cmc_data['market_cap'] / 1e9:.2f}B*"
+        f"\n❖ Объём за 24ч: *${cmc_data['volume_24h'] / 1e6:.2f}M*"
+        f"\n❖ Изменение за 24ч: *{cmc_data['percent_change_24h']:.2f}%*"
+    )
+else:
+    response += "\n❖ Не удалось загрузить данные с CoinMarketCap."
 
-                response += (
-                    f"
-
-📈 *Технический анализ (Binance)*
-"
-                    f"
-❖ RSI (14): *{rsi:.2f}* {rsi_comment}"
-                    f"
-❖ MA(50): *{ma50:.6f}* {ma_comment}"
-                    f"
-❖ Объём за 24ч: *{volume_str}*"
-                    f"
-❖ Зона сопротивления: ~*{resistance:.6f}*"
-                    f"
-
-_Это лишь базовый обзор. Для полноты картины учитывайте свои цели и стратегию._"
-                )
-                update.message.reply_text(response, parse_mode="Markdown")
-            except Exception as e:
+response += (
+    f"\n\n📈 *Технический анализ (Binance)*\n"
+    f"\n❖ RSI (14): *{rsi:.2f}* {rsi_comment}"
+    f"\n❖ MA(50): *{ma50:.6f}* {ma_comment}"
+    f"\n❖ Объём за 24ч: *{volume_str}*"
+    f"\n❖ Зона сопротивления: ~*{resistance:.6f}*"
+    f"\n\n_Это лишь базовый обзор. Для полноты картины учитывайте свои цели и стратегию._"
+)      
+                except Exception as e:
                 print(f"Анализ ошибка: {e}")
                 update.message.reply_text("Ошибка анализа. Возможно, монета не торгуется на Binance.")
 
