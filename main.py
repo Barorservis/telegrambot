@@ -114,7 +114,8 @@ def handle_text(update: Update, context: CallbackContext):
             if not klines:
                 update.message.reply_text("Монета не найдена на Binance.")
                 return
-                closes = [float(k[4]) for k in klines]
+
+            closes = [float(k[4]) for k in klines][float(k[4]) for k in klines]
                 volumes = [float(k[5]) for k in klines]
                 price = closes[-1]
                 ma50 = statistics.mean(closes[-50:])
@@ -155,7 +156,8 @@ def handle_text(update: Update, context: CallbackContext):
                     f"\n\n_Это лишь базовый обзор. Для полноты картины учитывайте свои цели и стратегию._"
                 )
                 update.message.reply_text(response, parse_mode="Markdown")
-            except:
+            except Exception as e:
+                print(f"Анализ ошибка: {e}")
                 update.message.reply_text("Ошибка анализа. Возможно, монета не торгуется на Binance.")
 
         elif mode == "📈 ГРАФИКА":
