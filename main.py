@@ -2,9 +2,8 @@ import logging
 import os
 import requests
 import matplotlib.pyplot as plt
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import (Updater, CommandHandler, CallbackQueryHandler,
-                          MessageHandler, Filters, CallbackContext)
+from telegram import ReplyKeyboardMarkup, KeyboardButton, Update
+from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, CallbackContext)
 from datetime import datetime
 
 TOKEN = os.getenv("BOT_TOKEN")
@@ -34,8 +33,7 @@ def get_price(symbol):
     except Exception as e:
         return f"Ошибка получения цены: {e}"
 
-def welcome_text():
-    first_name = "трейдер"  # По умолчанию, можно заменить на update.effective_user.first_name внутри handler-а
+def welcome_text(first_name="трейдер"):
     fake_count = 1523  # Заглушка, можно обновлять по желанию
     return (
         f"Привет, {first_name}! 👋\n"
@@ -45,62 +43,57 @@ def welcome_text():
     )
 
 def start(update: Update, context: CallbackContext):
-    update.message.reply_text(welcome_text(), parse_mode='Markdown')
+    first_name = update.effective_user.first_name or "трейдер"
+    update.message.reply_text(welcome_text(first_name), parse_mode='Markdown')
     keyboard = [
-        [InlineKeyboardButton("Анализ", callback_data='analyze')],
-        [InlineKeyboardButton("📈 Графика", callback_data='chart')],
-        [InlineKeyboardButton("📉 Прогноз на шорт", callback_data='short')],
-        [InlineKeyboardButton("📈 Прогноз на лонг", callback_data='long')]
+        [KeyboardButton("Анализ")],
+        [KeyboardButton("📈 Графика")],
+        [KeyboardButton("📉 Прогноз на шорт")],
+        [KeyboardButton("📈 Прогноз на лонг")]
     ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     update.message.reply_text("📍 Выбери раздел:", reply_markup=reply_markup)
 
-def crypto_buttons(update: Update, context: CallbackContext, action):
-    keyboard = [[InlineKeyboardButton(coin, callback_data=f'{action}_{coin}')] for coin in coins]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    update.callback_query.edit_message_text(f"Выбери монету:", reply_markup=reply_markup)
+def coin_menu(update: Update, context: CallbackContext, action):
+    keyboard = [[KeyboardButton(coin)] for coin in coins]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    update.message.reply_text("Выбери монету:", reply_markup=reply_markup)
+    context.user_data['action'] = action
 
-def handle_coin_action(update: Update, context: CallbackContext):
-    query = update.callback_query
-    query.answer()
-    data = query.data
-    action, coin = data.split('_')
+def handle_message(update: Update, context: CallbackContext):
+    text = update.message.text
+    action = context.user_data.get('action')
 
-    price = get_price(coin)
-    if isinstance(price, str):
-        query.edit_message_text(price)
-        return
+    if text in ["Анализ", "📈 Графика", "📉 Прогноз на шорт", "📈 Прогноз на лонг"]:
+        if "Анализ" in text:
+            coin_menu(update, context, 'analyze')
+        elif "шорт" in text:
+            coin_menu(update, context, 'short')
+        elif "лонг" in text:
+            coin_menu(update, context, 'long')
+        elif "Графика" in text:
+            coin_menu(update, context, 'chart')
+    elif text in coins:
+        price = get_price(text)
+        if isinstance(price, str):
+            update.message.reply_text(price)
+            return
 
-    if action == 'analyze':
-        query.edit_message_text(f"📊 Анализ {coin}\nТекущая цена: ${price}")
-    elif action == 'short':
-        query.edit_message_text(f"🔻 Шорт {coin}\nЦена: ${price}\nПричина: Цена на уровне сопротивления.")
-    elif action == 'long':
-        query.edit_message_text(f"📈 Лонг {coin}\nЦена: ${price}\nПричина: Цена пробивает сопротивление вверх.")
-    elif action == 'chart':
-        query.edit_message_text(f"📉 График {coin}\nЦена сейчас: ${price}\n(в будущем добавим картинку)")
-
-def button(update: Update, context: CallbackContext):
-    query = update.callback_query
-    query.answer()
-
-    if query.data == 'analyze':
-        crypto_buttons(update, context, 'analyze')
-    elif query.data == 'short':
-        crypto_buttons(update, context, 'short')
-    elif query.data == 'long':
-        crypto_buttons(update, context, 'long')
-    elif query.data == 'chart':
-        crypto_buttons(update, context, 'chart')
-    elif '_' in query.data:
-        handle_coin_action(update, context)
+        if action == 'analyze':
+            update.message.reply_text(f"📊 Анализ {text}\nТекущая цена: ${price}")
+        elif action == 'short':
+            update.message.reply_text(f"🔻 Шорт {text}\nЦена: ${price}\nПричина: Цена на уровне сопротивления.")
+        elif action == 'long':
+            update.message.reply_text(f"📈 Лонг {text}\nЦена: ${price}\nПричина: Цена пробивает сопротивление вверх.")
+        elif action == 'chart':
+            update.message.reply_text(f"📉 График {text}\nЦена сейчас: ${price}\n(в будущем добавим картинку)")
 
 def main():
     updater = Updater(TOKEN, use_context=True)
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CallbackQueryHandler(button))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
     updater.start_polling()
     updater.idle()
