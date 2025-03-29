@@ -13,9 +13,9 @@ matplotlib.use('Agg')
 TOKEN = os.getenv("BOT_TOKEN")
 CMC_API_KEY = "1bda7385-c9e8-4119-a1aa-1d89aabb96a2"
 BASE_URL = "https://api.binance.com/api/v3"
-TOP_COINS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "AVAXUSDT", "ADAUSDT", "BNBUSDT", "LTCUSDT", "XRPUSDT", "NOTUSDT", "DOGEUSDT"]
 
 FAKE_USERS_FILE = "fake_users.txt"
+
 
 def load_fake_users():
     if os.path.exists(FAKE_USERS_FILE):
@@ -23,14 +23,16 @@ def load_fake_users():
             return int(f.read())
     return 9000
 
+
 def save_fake_users(count):
     with open(FAKE_USERS_FILE, "w") as f:
         f.write(str(count))
 
+
 def get_cmc_data(symbol):
     url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
     headers = {"X-CMC_PRO_API_KEY": CMC_API_KEY}
-    params = {"start": "1", "limit": "100", "convert": "USD"}
+    params = {"start": "1", "limit": "200", "convert": "USD"}
     try:
         response = requests.get(url, headers=headers, params=params)
         data = response.json()["data"]
@@ -46,26 +48,11 @@ def get_cmc_data(symbol):
         print(f"CMC Error: {e}")
     return None
 
-def show_main_menu(update: Update, context: CallbackContext):
-    user = update.effective_user
-    first_name = user.first_name or "друг"
 
-    fake_count = load_fake_users() + 1
-    save_fake_users(fake_count)
+def get_klines(symbol, interval='1h', limit=50):
+    url = f"{BASE_URL}/klines?symbol={symbol}&interval={interval}&limit={limit}"
+    return requests.get(url).json()
 
-    welcome_text = (
-        f"Привет, {first_name}! 👋\n"
-        f"TradingZone Бота уже используют {fake_count} человек(а)\n"
-        "Этот Telegram-бот, который проводит реальный технический анализ по 10 топ-альтам и также дает прогнозы: Short и Long с точкой входа!\n"
-        "[Присоединяйся к нашему сообществу](https://t.me/tradingzone13)"
-    )
-
-    keyboard = ReplyKeyboardMarkup([
-        [KeyboardButton("📊 Анализ"), KeyboardButton("📈 Графика")]
-    ], resize_keyboard=True)
-
-    context.bot.send_message(chat_id=update.effective_chat.id, text=welcome_text, parse_mode="Markdown")
-    context.bot.send_message(chat_id=update.effective_chat.id, text="📍 Выбери раздел:", reply_markup=keyboard)
 
 def calculate_rsi(closes, period=14):
     if len(closes) < period + 1:
@@ -78,91 +65,112 @@ def calculate_rsi(closes, period=14):
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs))
 
-def get_klines(symbol, interval='1h', limit=50):
-    url = f"{BASE_URL}/klines?symbol={symbol}&interval={interval}&limit={limit}"
-    return requests.get(url).json()
+
+def show_main_menu(update: Update, context: CallbackContext):
+    user = update.effective_user
+    first_name = user.first_name or "друг"
+
+    fake_count = load_fake_users() + 1
+    save_fake_users(fake_count)
+
+    welcome_text = (
+        f"Привет, {first_name}! 👋\n"
+        f"TradingZone Бота уже используют {fake_count} человек(а)\n"
+        "Этот Telegram-бот проводит реальный технический и фундаментальный анализ любой криптомонеты!\n"
+        "[Присоединяйся к нашему сообществу](https://t.me/tradingzone13)"
+    )
+
+    keyboard = ReplyKeyboardMarkup([
+        [KeyboardButton("📊 Анализ"), KeyboardButton("📈 Графика")]
+    ], resize_keyboard=True)
+
+    context.bot.send_message(chat_id=update.effective_chat.id, text=welcome_text, parse_mode="Markdown")
+    context.bot.send_message(chat_id=update.effective_chat.id, text="📍 Выбери раздел:", reply_markup=keyboard)
+
 
 def handle_text(update: Update, context: CallbackContext):
-    text = update.message.text
+    text = update.message.text.upper()
+    mode = context.user_data.get('mode')
 
-    if text in ["📊 Анализ", "📈 Графика"]:
+    if text in ["📊 АНАЛИЗ", "📈 ГРАФИКА"]:
         context.user_data['mode'] = text
-        coin_buttons = [[KeyboardButton(coin[:-4])] for coin in TOP_COINS]
-        coin_buttons.append([KeyboardButton("🔙 Назад")])
-        reply_markup = ReplyKeyboardMarkup(coin_buttons, resize_keyboard=True)
-        update.message.reply_text("Выбери монету:", reply_markup=reply_markup)
-    elif text == "🔙 Назад":
-        show_main_menu(update, context)
-    elif any(text == coin[:-4] for coin in TOP_COINS):
+        update.message.reply_text("Введи тикер монеты (например: BTC, ETH, DOGE):")
+    elif mode in ["📊 АНАЛИЗ", "📈 ГРАФИКА"]:
         symbol = f"{text}USDT"
-        mode = context.user_data.get('mode')
 
-        if mode == "📊 Анализ":
+        if mode == "📊 АНАЛИЗ":
             cmc_data = get_cmc_data(text)
-            klines = get_klines(symbol)
-            closes = [float(k[4]) for k in klines]
-            volumes = [float(k[5]) for k in klines]
-            price = closes[-1]
-            ma50 = statistics.mean(closes[-50:])
-            rsi = calculate_rsi(closes)
-            volume_24h = sum(volumes[-24:])
-            resistance = max(closes[-10:])
-            volume_str = f"{volume_24h/1_000_000_000:.2f}B" if volume_24h >= 1e9 else f"{volume_24h/1_000_000:.2f}M"
+            try:
+                klines = get_klines(symbol)
+                closes = [float(k[4]) for k in klines]
+                volumes = [float(k[5]) for k in klines]
+                price = closes[-1]
+                ma50 = statistics.mean(closes[-50:])
+                rsi = calculate_rsi(closes)
+                volume_24h = sum(volumes[-24:])
+                resistance = max(closes[-10:])
+                volume_str = f"{volume_24h/1_000_000_000:.2f}B" if volume_24h >= 1e9 else f"{volume_24h/1_000_000:.2f}M"
 
-            rsi_comment = "(норма)"
-            if rsi > 70:
-                rsi_comment = "(перекуплен, возможна коррекция вниз)"
-            elif rsi < 30:
-                rsi_comment = "(перепродан, возможен отскок вверх)"
+                rsi_comment = "(норма)"
+                if rsi > 70:
+                    rsi_comment = "(перекуплен, возможна коррекция вниз)"
+                elif rsi < 30:
+                    rsi_comment = "(перепродан, возможен отскок вверх)"
 
-            ma_comment = "(флэт)"
-            if price > ma50:
-                ma_comment = "(восходящий тренд)"
-            elif price < ma50:
-                ma_comment = "(нисходящий тренд)"
+                ma_comment = "(флэт)"
+                if price > ma50:
+                    ma_comment = "(восходящий тренд)"
+                elif price < ma50:
+                    ma_comment = "(нисходящий тренд)"
 
-            text = f"📊 *Анализ {symbol[:-4]} (CoinMarketCap)*\n"
-            if cmc_data:
-                text += (
-                    f"\n❖ Цена: *${cmc_data['price']:.6f}*"
-                    f"\n❖ Рыночная капитализация: *${cmc_data['market_cap'] / 1e9:.2f}B*"
-                    f"\n❖ Объём за 24ч: *${cmc_data['volume_24h'] / 1e6:.2f}M*"
-                    f"\n❖ Изменение за 24ч: *{cmc_data['percent_change_24h']:.2f}%*"
+                response = f"📊 *Анализ {text} (CoinMarketCap)*\n"
+                if cmc_data:
+                    response += (
+                        f"\n❖ Цена: *${cmc_data['price']:.6f}*"
+                        f"\n❖ Рыночная капитализация: *${cmc_data['market_cap'] / 1e9:.2f}B*"
+                        f"\n❖ Объём за 24ч: *${cmc_data['volume_24h'] / 1e6:.2f}M*"
+                        f"\n❖ Изменение за 24ч: *{cmc_data['percent_change_24h']:.2f}%*"
+                    )
+                else:
+                    response += "\n❖ Не удалось загрузить данные с CoinMarketCap."
+
+                response += (
+                    f"\n\n📈 *Технический анализ (Binance)*\n"
+                    f"\n❖ RSI (14): *{rsi:.2f}* {rsi_comment}"
+                    f"\n❖ MA(50): *{ma50:.6f}* {ma_comment}"
+                    f"\n❖ Объём за 24ч: *{volume_str}*"
+                    f"\n❖ Зона сопротивления: ~*{resistance:.6f}*"
+                    f"\n\n_Это лишь базовый обзор. Для полноты картины учитывайте свои цели и стратегию._"
                 )
-            else:
-                text += "\n❖ Не удалось загрузить данные с CoinMarketCap."
+                update.message.reply_text(response, parse_mode="Markdown")
+            except:
+                update.message.reply_text("Ошибка анализа. Возможно, монета не торгуется на Binance.")
 
-            text += (
-                f"\n\n📈 *Технический анализ (Binance)*\n"
-                f"\n❖ RSI (14): *{rsi:.2f}* {rsi_comment}"
-                f"\n❖ MA(50): *{ma50:.6f}* {ma_comment}"
-                f"\n❖ Объём за 24ч: *{volume_str}*"
-                f"\n❖ Зона сопротивления: ~*{resistance:.6f}*"
-                f"\n\n_Это лишь базовый обзор. Для полноты картины учитывайте свои цели и стратегию._"
-            )
-            update.message.reply_text(text, parse_mode="Markdown")
+        elif mode == "📈 ГРАФИКА":
+            try:
+                klines = get_klines(symbol, interval='30m', limit=48)
+                times = [datetime.datetime.fromtimestamp(k[0]/1000) for k in klines]
+                closes = [float(k[4]) for k in klines]
 
-        elif mode == "📈 Графика":
-            klines = get_klines(symbol, interval='30m', limit=48)
-            times = [datetime.datetime.fromtimestamp(k[0]/1000) for k in klines]
-            closes = [float(k[4]) for k in klines]
+                plt.figure(figsize=(10, 4))
+                plt.plot(times, closes, label=text, color='blue')
+                plt.title(f"График {text} за 24ч")
+                plt.xlabel("Время")
+                plt.ylabel("Цена")
+                plt.grid(True)
+                plt.tight_layout()
 
-            plt.figure(figsize=(10, 4))
-            plt.plot(times, closes, label=symbol[:-4], color='blue')
-            plt.title(f"График {symbol[:-4]} за 24ч")
-            plt.xlabel("Время")
-            plt.ylabel("Цена")
-            plt.grid(True)
-            plt.tight_layout()
+                buf = io.BytesIO()
+                plt.savefig(buf, format='png')
+                buf.seek(0)
+                plt.close()
 
-            buf = io.BytesIO()
-            plt.savefig(buf, format='png')
-            buf.seek(0)
-            plt.close()
-
-            context.bot.send_photo(chat_id=update.effective_chat.id, photo=buf)
+                context.bot.send_photo(chat_id=update.effective_chat.id, photo=buf)
+            except:
+                update.message.reply_text("Ошибка: график не доступен. Возможно, монета не торгуется на Binance.")
     else:
         update.message.reply_text("Выбери действие с помощью кнопок ⬇️")
+
 
 def main():
     updater = Updater(TOKEN, use_context=True)
@@ -173,6 +181,7 @@ def main():
 
     updater.start_polling()
     updater.idle()
+
 
 if __name__ == '__main__':
     main()
