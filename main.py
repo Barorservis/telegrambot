@@ -38,17 +38,14 @@ def welcome_text():
     first_name = "трейдер"  # По умолчанию, можно заменить на update.effective_user.first_name внутри handler-а
     fake_count = 1523  # Заглушка, можно обновлять по желанию
     return (
-        f"Привет, {first_name}! 👋
-"
-        f"TradingZone Бота уже используют {fake_count} человек(а)
-"
-        "Этот Telegram-бот, который проводит реальный технический анализ по 10 топ-альтам и также дает прогнозы: Short и Long с точкой входа!
-"
+        f"Привет, {first_name}! 👋\n"
+        f"TradingZone Бота уже используют {fake_count} человек(а)\n"
+        "Этот Telegram-бот, который проводит реальный технический анализ по 10 топ-альтам и также дает прогнозы: Short и Long с точкой входа!\n"
         "[Присоединяйся к нашему сообществу](https://t.me/tradingzone13)"
     )
 
 def start(update: Update, context: CallbackContext):
-    update.message.reply_text(welcome_text())
+    update.message.reply_text(welcome_text(), parse_mode='Markdown')
     keyboard = [
         [InlineKeyboardButton("Анализ", callback_data='analyze')],
         [InlineKeyboardButton("📈 Графика", callback_data='chart')],
