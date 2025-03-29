@@ -10,7 +10,7 @@ import os
 
 matplotlib.use('Agg')
 
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = "8107581760:AAFfGWDdZsA9Npn2oNLQB-OgMNHbeIxfAKI"
 CMC_API_KEY = "1bda7385-c9e8-4119-a1aa-1d89aabb96a2"
 BASE_URL = "https://api.binance.com/api/v3"
 
