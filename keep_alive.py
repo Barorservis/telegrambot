@@ -15,7 +15,7 @@ def run():
 def ping_self():
     while True:
         try:
-            requests.get("https://tradingzone13-bot.repl.co")
+            requests.get("https://telegrambot.onrender.com")
             print("🔁 Пинг отправлен — бот жив.")
         except:
             print("❌ Пинг не отправлен.")
