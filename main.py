@@ -131,19 +131,10 @@ def handle_text(update: Update, context: CallbackContext):
 
                 response = (
                     f"📊 *Анализ {text} (CoinMarketCap)*\n"
-                )
-
-                if cmc_data:
-                    response += (
-                        f"\n❖ Цена: *${cmc_data['price']:.6f}*"
-                        f"\n❖ Рыночная капитализация: *${cmc_data['market_cap'] / 1e9:.2f}B*"
-                        f"\n❖ Объём за 24ч: *${cmc_data['volume_24h'] / 1e6:.2f}M*"
-                        f"\n❖ Изменение за 24ч: *{cmc_data['percent_change_24h']:.2f}%*"
-                    )
-                else:
-                    response += "\n❖ Не удалось загрузить данные с CoinMarketCap."
-
-                response += (
+                    f"\n❖ Цена: *${cmc_data['price']:.6f}*"
+                    f"\n❖ Рыночная капитализация: *${cmc_data['market_cap'] / 1e9:.2f}B*"
+                    f"\n❖ Объём за 24ч: *${cmc_data['volume_24h'] / 1e6:.2f}M*"
+                    f"\n❖ Изменение за 24ч: *{cmc_data['percent_change_24h']:.2f}%*"
                     f"\n\n📈 *Технический анализ (Binance)*\n"
                     f"\n❖ RSI (14): *{rsi:.2f}* {rsi_comment}"
                     f"\n❖ MA(50): *{ma50:.6f}* {ma_comment}"
