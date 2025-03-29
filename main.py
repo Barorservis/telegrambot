@@ -7,6 +7,7 @@ import io
 import datetime
 import matplotlib
 import os
+from flask import Flask
 
 matplotlib.use('Agg')
 
@@ -15,6 +16,9 @@ CMC_API_KEY = "1bda7385-c9e8-4119-a1aa-1d89aabb96a2"
 BASE_URL = "https://api.binance.com/api/v3"
 
 FAKE_USERS_FILE = "fake_users.txt"
+
+# Flask приложение для Render
+app = Flask(__name__)
 
 def load_fake_users():
     if os.path.exists(FAKE_USERS_FILE):
@@ -175,6 +179,9 @@ def handle_text(update: Update, context: CallbackContext):
         update.message.reply_text("Выбери действие с помощью кнопок ⬇️")
 
 def main():
+    # Запуск Flask с указанием порта для Render
+    port = int(os.environ.get('PORT', 5000))
+
     updater = Updater(TOKEN, use_context=True)
     dp = updater.dispatcher
 
@@ -183,6 +190,8 @@ def main():
 
     updater.start_polling()
     updater.idle()
+
+    app.run(host='0.0.0.0', port=port)
 
 # Запуск убран, чтобы избежать дублирующего polling от Render
 # if __name__ == '__main__':
