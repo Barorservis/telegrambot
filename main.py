@@ -183,4 +183,5 @@ def main():
     updater.idle()
 
 
-# Запуск убран, так как Render сам запускает main.py
+if __name__ == '__main__':
+    main()
