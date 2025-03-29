@@ -51,7 +51,15 @@ def get_cmc_data(symbol):
 
 def get_klines(symbol, interval='1h', limit=50):
     url = f"{BASE_URL}/klines?symbol={symbol}&interval={interval}&limit={limit}"
-    return requests.get(url).json()
+    response = requests.get(url)
+    try:
+        data = response.json()
+        if isinstance(data, dict) and data.get("code"):
+            raise ValueError("Binance error: invalid symbol")
+        return data
+    except Exception as e:
+        print(f"Binance API error: {e}")
+        return None
 
 
 def calculate_rsi(closes, period=14):
@@ -100,8 +108,12 @@ def handle_text(update: Update, context: CallbackContext):
 
         if mode == "📊 АНАЛИЗ":
             cmc_data = get_cmc_data(text)
-            try:
-                klines = get_klines(symbol)
+            if not cmc_data:
+                update.message.reply_text("Данные по монете не найдены в CoinMarketCap.")
+            klines = get_klines(symbol)
+            if not klines:
+                update.message.reply_text("Монета не найдена на Binance.")
+                return
                 closes = [float(k[4]) for k in klines]
                 volumes = [float(k[5]) for k in klines]
                 price = closes[-1]
