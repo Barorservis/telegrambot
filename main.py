@@ -10,7 +10,7 @@ import io
 import datetime
 import matplotlib
 
-matplotlib.use('Agg')  # Чтоб не требовать GUI для отрисовки
+matplotlib.use('Agg')
 
 TOKEN = "8107581760:AAFfGWDdZsA9Npn2oNLQB-OgMNHbeIxfAKI"
 CMC_API_KEY = "1bda7385-c9e8-4119-a1aa-1d89aabb96a2"
@@ -35,12 +35,6 @@ def save_fake_users(count):
         f.write(str(count))
 
 def get_cmc_data(symbol):
-    """
-    Запрашивает данные о монетах на CoinMarketCap
-    и возвращает словарь с ключами:
-    price, market_cap, volume_24h, percent_change_24h
-    или None, если монета не найдена / произошла ошибка.
-    """
     url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
     headers = {"X-CMC_PRO_API_KEY": CMC_API_KEY}
     params = {"start": "1", "limit": "200", "convert": "USD"}
@@ -60,27 +54,19 @@ def get_cmc_data(symbol):
     return None
 
 def get_klines(symbol, interval='1h', limit=50):
-    """
-    Запрашивает данные свечей на Binance.
-    Возвращает список klines или None при ошибке.
-    """
     url = f"{BASE_URL}/klines?symbol={symbol}&interval={interval}&limit={limit}"
     try:
         response = requests.get(url)
         data = response.json()
-        if isinstance(data, dict) and data.get("code"):
-            # Binance вернула ошибку, например { "code": -1121, "msg": "Invalid symbol." }
-            raise ValueError(f"Binance error: {data}")
+        # Если ответ не является списком, значит что-то пошло не так
+        if not isinstance(data, list):
+            raise ValueError(f"Unexpected response from Binance: {data}")
         return data
     except Exception as e:
         print(f"Binance API error: {e}", flush=True)
         return None
 
 def calculate_rsi(closes, period=14):
-    """
-    Расчёт RSI (14) по закрытиям свечей.
-    Если данных меньше, чем period+1, возвращаем 0.
-    """
     if len(closes) < period + 1:
         return 0
     deltas = [closes[i+1] - closes[i] for i in range(len(closes)-1)]
@@ -119,18 +105,15 @@ def handle_text(update: Update, context: CallbackContext):
         context.user_data['mode'] = text
         update.message.reply_text("Введи тикер монеты (например: BTC, ETH, DOGE):")
     elif mode in ["📊 АНАЛИЗ", "📈 ГРАФИКА"]:
-        # Добавляем к тикеру 'USDT', чтобы искать монету на Binance
         symbol = f"{text}USDT"
 
         if mode == "📊 АНАЛИЗ":
             try:
-                # 1. Получаем данные с CoinMarketCap
                 cmc_data = get_cmc_data(text)
                 if cmc_data is None:
                     update.message.reply_text("Данные по монете не найдены в CoinMarketCap.")
                     return
 
-                # 2. Получаем свечи с Binance
                 klines = get_klines(symbol)
                 if not klines or len(klines) == 0:
                     update.message.reply_text("Монета не найдена на Binance.")
@@ -139,7 +122,6 @@ def handle_text(update: Update, context: CallbackContext):
                 closes = [float(k[4]) for k in klines]
                 volumes = [float(k[5]) for k in klines]
 
-                # Для MA(50) нужно минимум 50 значений
                 if len(closes) < 50:
                     update.message.reply_text("Недостаточно данных для расчёта MA(50).")
                     return
@@ -149,22 +131,16 @@ def handle_text(update: Update, context: CallbackContext):
                 rsi = calculate_rsi(closes)
                 volume_24h = sum(volumes[-24:])
 
-                # Для сопротивления берём максимум за последние 10 свечей
-                if len(closes) < 10:
-                    resistance = price
-                else:
-                    resistance = max(closes[-10:])
+                resistance = max(closes[-10:]) if len(closes) >= 10 else price
 
                 volume_str = f"{volume_24h/1_000_000_000:.2f}B" if volume_24h >= 1e9 else f"{volume_24h/1_000_000:.2f}M"
 
-                # Комментарии к RSI
                 rsi_comment = "(норма)"
                 if rsi > 70:
                     rsi_comment = "(перекуплен, возможна коррекция вниз)"
                 elif rsi < 30:
                     rsi_comment = "(перепродан, возможен отскок вверх)"
 
-                # Комментарии к MA(50)
                 ma_comment = "(флэт)"
                 if price > ma50:
                     ma_comment = "(восходящий тренд)"
@@ -188,7 +164,6 @@ def handle_text(update: Update, context: CallbackContext):
                 update.message.reply_text(response, parse_mode="Markdown")
 
             except Exception as e:
-                # Выводим текст ошибки и в лог, и в сообщение бота
                 print(f"Анализ ошибка: {e}", flush=True)
                 update.message.reply_text(f"Ошибка анализа: {e}\nВозможно, монета не торгуется на Binance.")
 
@@ -223,9 +198,6 @@ def handle_text(update: Update, context: CallbackContext):
         update.message.reply_text("Выбери действие с помощью кнопок ⬇️")
 
 def run_bot():
-    """
-    Функция для запуска Telegram-бота в режиме polling.
-    """
     updater = Updater(TOKEN, use_context=True)
     dp = updater.dispatcher
 
@@ -236,10 +208,8 @@ def run_bot():
     updater.idle()
 
 if __name__ == '__main__':
-    # Запускаем бота в отдельном потоке
     bot_thread = threading.Thread(target=run_bot)
     bot_thread.start()
 
-    # Запускаем Flask-приложение, чтобы Render не убивал сервис
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
