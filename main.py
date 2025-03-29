@@ -107,15 +107,16 @@ def handle_text(update: Update, context: CallbackContext):
         symbol = f"{text}USDT"
 
         if mode == "📊 АНАЛИЗ":
-            cmc_data = get_cmc_data(text)
-            if not cmc_data:
-                update.message.reply_text("Данные по монете не найдены в CoinMarketCap.")
-            klines = get_klines(symbol)
-            if not klines:
-                update.message.reply_text("Монета не найдена на Binance.")
-                return
+            try:
+                cmc_data = get_cmc_data(text)
+                if not cmc_data:
+                    update.message.reply_text("Данные по монете не найдены в CoinMarketCap.")
+                klines = get_klines(symbol)
+                if not klines:
+                    update.message.reply_text("Монета не найдена на Binance.")
+                    return
 
-            closes = [float(k[4]) for k in klines][float(k[4]) for k in klines]
+                closes = [float(k[4]) for k in klines]
                 volumes = [float(k[5]) for k in klines]
                 price = closes[-1]
                 ma50 = statistics.mean(closes[-50:])
