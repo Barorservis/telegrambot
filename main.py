@@ -1,7 +1,3 @@
-from pathlib import Path
-
-# Полностью исправленный main.py с корректными отступами
-fixed_main_py = """
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 import requests
@@ -79,9 +75,12 @@ def show_main_menu(update: Update, context: CallbackContext):
     save_fake_users(fake_count)
 
     welcome_text = (
-        f"Привет, {first_name}! 👋\n"
-        f"TradingZone Бота уже используют {fake_count} человек(а)\n"
-        "Этот Telegram-бот проводит реальный технический и фундаментальный анализ любой криптомонеты!\n"
+        f"Привет, {first_name}! 👋
+"
+        f"TradingZone Бота уже используют {fake_count} человек(а)
+"
+        "Этот Telegram-бот проводит реальный технический и фундаментальный анализ любой криптомонеты!
+"
         "[Присоединяйся к нашему сообществу](https://t.me/tradingzone13)"
     )
 
@@ -134,26 +133,26 @@ def handle_text(update: Update, context: CallbackContext):
                     ma_comment = "(нисходящий тренд)"
 
                 response = (
-                    f"📊 *Анализ {text} (CoinMarketCap)*\\n"
+                    f"📊 *Анализ {text} (CoinMarketCap)*\n"
                 )
 
                 if cmc_data:
                     response += (
-                        f"\\n❖ Цена: *${cmc_data['price']:.6f}*"
-                        f"\\n❖ Рыночная капитализация: *${cmc_data['market_cap'] / 1e9:.2f}B*"
-                        f"\\n❖ Объём за 24ч: *${cmc_data['volume_24h'] / 1e6:.2f}M*"
-                        f"\\n❖ Изменение за 24ч: *{cmc_data['percent_change_24h']:.2f}%*"
+                        f"\n❖ Цена: *${cmc_data['price']:.6f}*"
+                        f"\n❖ Рыночная капитализация: *${cmc_data['market_cap'] / 1e9:.2f}B*"
+                        f"\n❖ Объём за 24ч: *${cmc_data['volume_24h'] / 1e6:.2f}M*"
+                        f"\n❖ Изменение за 24ч: *{cmc_data['percent_change_24h']:.2f}%*"
                     )
                 else:
-                    response += "\\n❖ Не удалось загрузить данные с CoinMarketCap."
+                    response += "\n❖ Не удалось загрузить данные с CoinMarketCap."
 
                 response += (
-                    f"\\n\\n📈 *Технический анализ (Binance)*\\n"
-                    f"\\n❖ RSI (14): *{rsi:.2f}* {rsi_comment}"
-                    f"\\n❖ MA(50): *{ma50:.6f}* {ma_comment}"
-                    f"\\n❖ Объём за 24ч: *{volume_str}*"
-                    f"\\n❖ Зона сопротивления: ~*{resistance:.6f}*"
-                    f"\\n\\n_Это лишь базовый обзор. Для полноты картины учитывайте свои цели и стратегию._"
+                    f"\n\n📈 *Технический анализ (Binance)*\n"
+                    f"\n❖ RSI (14): *{rsi:.2f}* {rsi_comment}"
+                    f"\n❖ MA(50): *{ma50:.6f}* {ma_comment}"
+                    f"\n❖ Объём за 24ч: *{volume_str}*"
+                    f"\n❖ Зона сопротивления: ~*{resistance:.6f}*"
+                    f"\n\n_Это лишь базовый обзор. Для полноты картины учитывайте свои цели и стратегию._"
                 )
 
                 update.message.reply_text(response, parse_mode="Markdown")
@@ -200,9 +199,3 @@ def main():
 # Запуск убран, чтобы избежать дублирующего polling от Render
 # if __name__ == '__main__':
 #     main()
-"""
-
-# Сохраняем файл
-file_path = "/mnt/data/main.py"
-Path(file_path).write_text(fixed_main_py.strip(), encoding="utf-8")
-file_path
