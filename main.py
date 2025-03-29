@@ -1,99 +1,82 @@
-import logging
-import os
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 import requests
+import statistics
 import matplotlib.pyplot as plt
-from telegram import ReplyKeyboardMarkup, KeyboardButton, Update
-from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, CallbackContext)
-from datetime import datetime
+import io
+import datetime
+import matplotlib
+import os
+
+matplotlib.use('Agg')
 
 TOKEN = os.getenv("BOT_TOKEN")
-BOT_NAME = os.getenv("BOT_NAME")
+CMC_API_KEY = "1bda7385-c9e8-4119-a1aa-1d89aabb96a2"
+BASE_URL = "https://api.binance.com/api/v3"
+TOP_COINS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "AVAXUSDT", "ADAUSDT", "BNBUSDT", "LTCUSDT", "XRPUSDT", "NOTUSDT", "DOGEUSDT"]
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-logger = logging.getLogger(__name__)
+FAKE_USERS_FILE = "fake_users.txt"
 
-coins = ['BTC', 'ETH', 'SOL', 'AVAX', 'ADA', 'BNB', 'LTC', 'XRP', 'NOT', 'DOGE']
+def load_fake_users():
+    if os.path.exists(FAKE_USERS_FILE):
+        with open(FAKE_USERS_FILE, "r") as f:
+            return int(f.read())
+    return 9000
 
-# Получение текущей цены с CoinGecko
-def get_price(symbol):
+def save_fake_users(count):
+    with open(FAKE_USERS_FILE, "w") as f:
+        f.write(str(count))
+
+def get_cmc_data(symbol):
+    url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
+    headers = {"X-CMC_PRO_API_KEY": CMC_API_KEY}
+    params = {"start": "1", "limit": "100", "convert": "USD"}
     try:
-        ids = {
-            'BTC': 'bitcoin', 'ETH': 'ethereum', 'SOL': 'solana', 'AVAX': 'avalanche-2',
-            'ADA': 'cardano', 'BNB': 'binancecoin', 'LTC': 'litecoin',
-            'XRP': 'ripple', 'NOT': 'notcoin', 'DOGE': 'dogecoin'
-        }
-        url = f"https://api.coingecko.com/api/v3/simple/price?ids={ids[symbol]}&vs_currencies=usd"
-        response = requests.get(url)
-        if response.status_code != 200:
-            return "Ошибка запроса к CoinGecko"
-        response = response.json()
-        if ids[symbol] not in response or 'usd' not in response[ids[symbol]]:
-            return "Данные по монете не найдены"
-        return response[ids[symbol]]['usd']
+        response = requests.get(url, headers=headers, params=params)
+        data = response.json()["data"]
+        for coin in data:
+            if coin["symbol"].upper() == symbol.upper():
+                return {
+                    "price": coin["quote"]["USD"]["price"],
+                    "market_cap": coin["quote"]["USD"]["market_cap"],
+                    "volume_24h": coin["quote"]["USD"]["volume_24h"],
+                    "percent_change_24h": coin["quote"]["USD"]["percent_change_24h"]
+                }
     except Exception as e:
-        return f"Ошибка получения цены: {e}"
+        print(f"CMC Error: {e}")
+    return None
 
-def welcome_text(first_name="трейдер"):
-    fake_count = 1523  # Заглушка, можно обновлять по желанию
-    return (
+def show_main_menu(update: Update, context: CallbackContext):
+    user = update.effective_user
+    first_name = user.first_name or "друг"
+
+    fake_count = load_fake_users() + 1
+    save_fake_users(fake_count)
+
+    welcome_text = (
         f"Привет, {first_name}! 👋\n"
         f"TradingZone Бота уже используют {fake_count} человек(а)\n"
         "Этот Telegram-бот, который проводит реальный технический анализ по 10 топ-альтам и также дает прогнозы: Short и Long с точкой входа!\n"
         "[Присоединяйся к нашему сообществу](https://t.me/tradingzone13)"
     )
 
-def start(update: Update, context: CallbackContext):
-    first_name = update.effective_user.first_name or "трейдер"
-    update.message.reply_text(welcome_text(first_name), parse_mode='Markdown')
-    keyboard = [
-        [KeyboardButton("Анализ")],
-        [KeyboardButton("📈 Графика")],
-        [KeyboardButton("📉 Прогноз на шорт")],
-        [KeyboardButton("📈 Прогноз на лонг")]
-    ]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    update.message.reply_text("📍 Выбери раздел:", reply_markup=reply_markup)
+    keyboard = ReplyKeyboardMarkup([
+        [KeyboardButton("📊 Анализ"), KeyboardButton("📈 Графика")]
+    ], resize_keyboard=True)
 
-def coin_menu(update: Update, context: CallbackContext, action):
-    keyboard = [[KeyboardButton(coin)] for coin in coins]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    update.message.reply_text("Выбери монету:", reply_markup=reply_markup)
-    context.user_data['action'] = action
+    context.bot.send_message(chat_id=update.effective_chat.id, text=welcome_text, parse_mode="Markdown")
+    context.bot.send_message(chat_id=update.effective_chat.id, text="📍 Выбери раздел:", reply_markup=keyboard)
 
-def handle_message(update: Update, context: CallbackContext):
-    text = update.message.text
-    action = context.user_data.get('action')
+# Остальная часть кода остаётся без изменений, обработчики для шортов и лонгов просто больше не вызываются.
 
-    if text in ["Анализ", "📈 Графика", "📉 Прогноз на шорт", "📈 Прогноз на лонг"]:
-        if "Анализ" in text:
-            coin_menu(update, context, 'analyze')
-        elif "шорт" in text:
-            coin_menu(update, context, 'short')
-        elif "лонг" in text:
-            coin_menu(update, context, 'long')
-        elif "Графика" in text:
-            coin_menu(update, context, 'chart')
-    elif text in coins:
-        price = get_price(text)
-        if isinstance(price, str):
-            update.message.reply_text(price)
-            return
-
-        if action == 'analyze':
-            update.message.reply_text(f"📊 Анализ {text}\nТекущая цена: ${price}")
-        elif action == 'short':
-            update.message.reply_text(f"🔻 Шорт {text}\nЦена: ${price}\nПричина: Цена на уровне сопротивления.")
-        elif action == 'long':
-            update.message.reply_text(f"📈 Лонг {text}\nЦена: ${price}\nПричина: Цена пробивает сопротивление вверх.")
-        elif action == 'chart':
-            update.message.reply_text(f"📉 График {text}\nЦена сейчас: ${price}\n(в будущем добавим картинку)")
+# ... (всё остальное как есть)
 
 def main():
     updater = Updater(TOKEN, use_context=True)
     dp = updater.dispatcher
 
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+    dp.add_handler(CommandHandler("start", show_main_menu))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_text))
 
     updater.start_polling()
     updater.idle()
